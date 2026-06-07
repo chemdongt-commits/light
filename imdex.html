@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중학 과학 - 빛의 삼원색 및 물체의 색 시뮬레이션</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 캔버스 드래그 시 텍스트 및 기본 터치 스크롤 방지 */
+        canvas {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        /* 스크롤바 디자인 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+    <!-- 헤더 -->
+    <header class="bg-gradient-to-r from-red-600 via-green-600 to-blue-600 text-white shadow-md px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🌈</span>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-tight">빛의 삼원색과 물체의 색</h1>
+                    <p class="text-xs text-slate-200 mt-0.5">중학교 2학년 과학 | 3개 원판 드래그 & 조명에 따른 물체의 색 변화 실험실</p>
+                </div>
+            </div>
+            <!-- 모드 탭 선택기 -->
+            <div class="flex flex-wrap gap-2 bg-black/40 p-1 rounded-lg backdrop-blur-sm">
+                <button onclick="changeTab('blend')" id="tab-blend" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-white text-slate-900 shadow">💡 조명 합성 모드</button>
+                <button onclick="changeTab('object')" id="tab-object" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all text-white hover:bg-white/10">🍎 물체의 색 관찰 모드</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 왼쪽: 실험실 제어반 (L: 4/12) -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            
+            <!-- 1. 개별 조명 세기 및 크기 조절기 -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 p-5">
+                <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <span class="text-amber-400">⚙️</span> 1. 조명 세기 및 크기 조절
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- 빨간색 조명 (Red) -->
+                    <div class="p-3 bg-red-950/20 border border-red-900/40 rounded-xl">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-red-400">🔴 빨간색 조명 (Red)</span>
+                            <span id="val-r" class="text-xs font-bold text-red-400 bg-red-900/30 px-2 py-0.5 rounded-full">100%</span>
+                        </div>
+                        <input type="range" id="slide-r-int" min="0" max="100" value="100" oninput="onControlChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-500">
+                        
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-[10px] text-slate-400">조명 크기(반경)</span>
+                            <span id="val-r-rad" class="text-[10px] text-red-400 font-bold">120px</span>
+                        </div>
+                        <input type="range" id="slide-r-rad" min="60" max="180" value="120" oninput="onControlChange()" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-500">
+                    </div>
+
+                    <!-- 초록색 조명 (Green) -->
+                    <div class="p-3 bg-green-950/20 border border-green-900/40 rounded-xl">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-green-400">🟢 초록색 조명 (Green)</span>
+                            <span id="val-g" class="text-xs font-bold text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full">100%</span>
+                        </div>
+                        <input type="range" id="slide-g-int" min="0" max="100" value="100" oninput="onControlChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-green-500">
+                        
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-[10px] text-slate-400">조명 크기(반경)</span>
+                            <span id="val-g-rad" class="text-[10px] text-green-400 font-bold">120px</span>
+                        </div>
+                        <input type="range" id="slide-g-rad" min="60" max="180" value="120" oninput="onControlChange()" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-green-500">
+                    </div>
+
+                    <!-- 파란색 조명 (Blue) -->
+                    <div class="p-3 bg-blue-950/20 border border-blue-900/40 rounded-xl">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-blue-400">🔵 파란색 조명 (Blue)</span>
+                            <span id="val-b" class="text-xs font-bold text-blue-400 bg-blue-900/30 px-2 py-0.5 rounded-full">100%</span>
+                        </div>
+                        <input type="range" id="slide-b-int" min="0" max="100" value="100" oninput="onControlChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-[10px] text-slate-400">조명 크기(반경)</span>
+                            <span id="val-b-rad" class="text-[10px] text-blue-400 font-bold">120px</span>
+                        </div>
+                        <input type="range" id="slide-b-rad" min="60" max="180" value="120" oninput="onControlChange()" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 모드별 과학적 원리 설명 & 리셋 -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 p-5 flex-grow flex flex-col justify-between">
+                <div>
+                    <!-- [A] 조명 합성 설명 상자 -->
+                    <div id="desc-blend" class="space-y-3">
+                        <h2 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+                            <span class="text-indigo-400">💡</span> 빛의 합성 원리
+                        </h2>
+                        <div class="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300 leading-relaxed">
+                            <p>빛은 섞을수록 밝아지는 <strong class="text-yellow-400">가산 혼합</strong>을 합니다.</p>
+                            <div class="h-px bg-slate-800 my-2"></div>
+                            <p class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block"></span> <strong>R + G = 노란색 (Yellow)</strong></p>
+                            <p class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> <strong>G + B = 청록색 (Cyan)</strong></p>
+                            <p class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-fuchsia-400 inline-block"></span> <strong>R + B = 자홍색 (Magenta)</strong></p>
+                            <p class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span> <strong>R + G + B = 흰색 (White)</strong></p>
+                        </div>
+                    </div>
+
+                    <!-- [B] 물체의 색 설명 상자 -->
+                    <div id="desc-object" class="hidden space-y-3">
+                        <h2 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+                            <span class="text-rose-400">🍎</span> 물체의 색이 보이는 원리
+                        </h2>
+                        <div class="p-4 bg-slate-950/60 rounded-xl border border-slate-800 space-y-3 text-xs text-slate-300 leading-relaxed">
+                            <p>물체는 고유한 색의 빛만 <strong class="text-emerald-400">반사</strong>하고, 나머지 빛은 전부 <strong class="text-red-400">흡수</strong>합니다. 우리 눈에는 반사되어 튕겨 나온 빛만 도달하여 색을 보게 됩니다.</p>
+                            <div class="h-px bg-slate-800 my-1"></div>
+                            <div class="space-y-2">
+                                <p><span class="text-red-400 font-bold">🍎 빨간 사과:</span> 빨간색 빛만 반사하고 나머지는 흡수합니다. 초록 조명만 비추면 반사할 빨간 빛이 없어 <strong>검은색</strong>으로 보입니다.</p>
+                                <p><span class="text-yellow-400 font-bold">🍌 노란 바나나:</span> 빨간빛과 초록빛을 동시에 반사합니다. 파란 조명만 비추면 반사할 수 없어 <strong>검은색</strong>으로 보입니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 위치 리셋 버튼 -->
+                <div class="mt-6 pt-4 border-t border-slate-800">
+                    <button onclick="resetLights()" class="w-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition border border-slate-700">
+                        🔄 화면 요소 정중앙 초기화
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 오른쪽: 인터랙티브 캔버스 화면 (R: 8/12) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            
+            <!-- 시뮬레이션 메인 화면 -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 p-4 flex flex-col h-full">
+                
+                <!-- 상단 미니 툴바 -->
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                        <span id="simulator-title" class="text-xs font-bold text-slate-400">실시간 광원 합성 스크린</span>
+                    </div>
+                    <!-- 범례 -->
+                    <div class="flex gap-4 text-[11px] text-slate-400">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block border border-white/20"></span> 빨강</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-600 inline-block border border-white/20"></span> 초록</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block border border-white/20"></span> 파랑</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded border border-dashed border-slate-400 inline-block"></span> 🎯 센서</span>
+                    </div>
+                </div>
+
+                <!-- 인터랙티브 캔버스 -->
+                <div class="relative flex-grow bg-black rounded-xl overflow-hidden min-h-[440px] border border-slate-950 flex flex-col">
+                    <canvas id="stage-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+                    
+                    <!-- 조작 툴팁 오버레이 -->
+                    <div class="absolute bottom-3 left-3 right-3 bg-slate-950/85 backdrop-blur-sm text-[11px] text-slate-300 px-3 py-2.5 rounded-xl border border-slate-800 pointer-events-none flex items-center gap-2">
+                        <span class="text-base">💡</span>
+                        <span id="tooltip-text"><b>R, G, B 조명 핸들</b>과 <b>🎯빛 감지 센서</b>를 마우스나 터치로 원하는 방향에 끌어다 놓으세요!</span>
+                    </div>
+                </div>
+
+                <!-- 실시간 센서 및 픽셀 탐지 피드백 보드 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-xs">
+                    
+                    <!-- 1. 색상 이름 및 미리보기 -->
+                    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 text-center flex flex-col justify-center items-center">
+                        <p class="text-slate-400 font-bold mb-1.5">🎯 센서 탐지 색상</p>
+                        <div class="flex items-center gap-2.5">
+                            <span id="sensor-color-preview" class="w-6 h-6 rounded-full inline-block border border-slate-700 shadow-inner"></span>
+                            <span id="sensor-color-name" class="font-black text-white text-sm">로딩 중...</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. RGB 수치 비율 -->
+                    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 text-center flex flex-col justify-center">
+                        <p class="text-slate-400 font-bold mb-1.5">📊 검출된 빛의 양</p>
+                        <div class="grid grid-cols-3 gap-1.5 font-bold text-xs">
+                            <span class="text-red-400">R: <span id="sensor-val-r">0</span></span>
+                            <span class="text-green-400">G: <span id="sensor-val-g">0</span></span>
+                            <span class="text-blue-400">B: <span id="sensor-val-b">0</span></span>
+                        </div>
+                    </div>
+
+                    <!-- 3. 실시간 과학적 원리 설명 -->
+                    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex items-center justify-center">
+                        <p id="sensor-explain-text" class="text-slate-300 text-center text-[11px] leading-relaxed">
+                            센서를 움직여 겹치는 구역 위에 올리면, 해당 색깔이 만들어지는 시각 세포와 뇌의 인지 구조를 풀어 설명합니다.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-slate-950 border-t border-slate-900 py-4 px-6 text-center text-xs text-slate-500 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>© 빛의 삼원색 합성 및 물체의 색 탐구 실험실 - 중학교 과학 가상 조작 자료</p>
+            <p>고성능 혼합 가산 렌더링 엔진 탑재 | 터치 크로스플랫폼 인터페이스</p>
+        </div>
+    </footer>
+
+    <!-- 자바스크립트 소스코드 -->
+    <script>
+        // --- 전역 설정 및 상태 변수 ---
+        let currentTab = 'blend'; // 'blend' (조명 합성), 'object' (물체의 색)
+
+        // 1. 삼원색 조명 상태 정의
+        const lights = {
+            red: { id: 'red', name: '빨강 (Red)', x: 0, y: 0, radius: 120, intensity: 1.0, color: '#ff0000', handleColor: '#ef4444' },
+            green: { id: 'green', name: '초록 (Green)', x: 0, y: 0, radius: 120, intensity: 1.0, color: '#00ff00', handleColor: '#22c55e' },
+            blue: { id: 'blue', name: '파랑 (Blue)', x: 0, y: 0, radius: 120, intensity: 1.0, color: '#0000ff', handleColor: '#3b82f6' }
+        };
+
+        // 2. 빛 감지 센서 돋보기 도구 상태
+        const sensor = { x: 0, y: 0, radius: 18, color: '#ffffff' };
+
+        // 3. 물체 색 관찰 모드에서 쓰일 실물 사물들 정의 (과일, 모자)
+        const sceneObjects = [
+            { id: 'apple', name: '빨간 사과', emoji: '🍎', x: 0, y: 0, radius: 24, reflect: { r: 1.0, g: 0.0, b: 0.0 } }, // 빨간빛만 반사
+            { id: 'leaf', name: '초록 잎새', emoji: '🍃', x: 0, y: 0, radius: 24, reflect: { r: 0.0, g: 1.0, b: 0.0 } }, // 초록빛만 반사
+            { id: 'banana', name: '노란 바나나', emoji: '🍌', x: 0, y: 0, radius: 24, reflect: { r: 1.0, g: 0.9, b: 0.0 } }, // 빨강+초록 반사
+            { id: 'cap', name: '파란 모자', emoji: '🧢', x: 0, y: 0, radius: 24, reflect: { r: 0.0, g: 0.0, b: 1.0 } }  // 파란빛만 반사
+        ];
+
+        // 캔버스 드래그 조작 제어용
+        const canvas = document.getElementById('stage-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        let isDragging = false;
+        let dragTarget = null; // 'red', 'green', 'blue', 'sensor', 'apple', 'leaf', 'banana', 'cap'
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // --- 초기 초기화 구동 ---
+        window.onload = function() {
+            setupCanvasSize();
+            resetLights();
+            updateUI();
+            render();
+
+            // 반응형 조율
+            window.addEventListener('resize', () => {
+                const oldW = canvas.width / (window.devicePixelRatio || 1);
+                const oldH = canvas.height / (window.devicePixelRatio || 1);
+
+                setupCanvasSize();
+
+                const newW = canvas.width / (window.devicePixelRatio || 1);
+                const newH = canvas.height / (window.devicePixelRatio || 1);
+
+                const rx = newW / oldW;
+                const ry = newH / oldH;
+
+                // 위치 비례 보정
+                Object.keys(lights).forEach(k => {
+                    lights[k].x *= rx;
+                    lights[k].y *= ry;
+                });
+                sensor.x *= rx;
+                sensor.y *= ry;
+
+                sceneObjects.forEach(obj => {
+                    obj.x *= rx;
+                    obj.y *= ry;
+                });
+
+                render();
+            });
+
+            // 마우스 및 터치 이벤트 연결
+            canvas.addEventListener('mousedown', onMouseDown);
+            canvas.addEventListener('mousemove', onMouseMove);
+            canvas.addEventListener('mouseup', onMouseUp);
+            canvas.addEventListener('mouseleave', onMouseUp);
+
+            canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+            canvas.addEventListener('touchend', onMouseUp);
+        };
+
+        // 해상도에 맞는 픽셀 스케일 세팅
+        function setupCanvasSize() {
+            const rect = canvas.getBoundingClientRect();
+            let w = rect.width || 600;
+            let h = rect.height || 440;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        // 전체 초기 배치 세팅
+        function resetLights() {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+
+            const cx = w / 2;
+            const cy = h / 2 - 20;
+
+            // 1. 조명 삼각 배치 균형점 설정
+            lights.red.x = cx;
+            lights.red.y = cy - 45;
+
+            lights.green.x = cx - 60;
+            lights.green.y = cy + 45;
+
+            lights.blue.x = cx + 60;
+            lights.blue.y = cy + 45;
+
+            // 반경 및 세기 초기화 (진하고 가시성 높게 설정)
+            lights.red.radius = 120;
+            lights.red.intensity = 1.0;
+            lights.green.radius = 120;
+            lights.green.intensity = 1.0;
+            lights.blue.radius = 120;
+            lights.blue.intensity = 1.0;
+
+            // 슬라이더 복원
+            document.getElementById('slide-r-int').value = 100;
+            document.getElementById('slide-g-int').value = 100;
+            document.getElementById('slide-b-int').value = 100;
+
+            document.getElementById('slide-r-rad').value = 120;
+            document.getElementById('slide-g-rad').value = 120;
+            document.getElementById('slide-b-rad').value = 120;
+
+            // 2. 센서 기본 위치 배치
+            sensor.x = cx;
+            sensor.y = cy + 10;
+
+            // 3. 탐구용 물체 일렬 정적인 수평 배치
+            sceneObjects[0].x = cx - 110; sceneObjects[0].y = cy + 110; // 사과
+            sceneObjects[1].x = cx - 35;  sceneObjects[1].y = cy + 110; // 잎새
+            sceneObjects[2].x = cx + 35;  sceneObjects[2].y = cy + 110; // 바나나
+            sceneObjects[3].x = cx + 110; sceneObjects[3].y = cy + 110; // 파란모자
+
+            updateUI();
+            render();
+        }
+
+        // 탭 토글
+        function changeTab(tabName) {
+            currentTab = tabName;
+
+            document.getElementById('tab-blend').className = "px-4 py-1.5 rounded-md text-sm font-bold transition-all text-white hover:bg-white/10";
+            document.getElementById('tab-object').className = "px-4 py-1.5 rounded-md text-sm font-bold transition-all text-white hover:bg-white/10";
+
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            activeBtn.className = "px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-white text-slate-900 shadow";
+
+            // 설명칸 전환
+            document.getElementById('desc-blend').classList.add('hidden');
+            document.getElementById('desc-object').classList.add('hidden');
+            document.getElementById(`desc-${tabName}`).classList.remove('hidden');
+
+            const tooltip = document.getElementById('tooltip-text');
+            if (tabName === 'blend') {
+                document.getElementById('simulator-title').innerText = "실시간 광원 합성 스크린";
+                tooltip.innerHTML = "<b>R, G, B 조명 핸들</b>과 <b>🎯빛 감지 센서</b>를 마우스나 터치로 원하는 방향에 끌어다 놓으세요!";
+            } else {
+                document.getElementById('simulator-title').innerText = "물체의 색 관찰 실험실";
+                tooltip.innerHTML = "조명 원판을 <b>🍎, 🍌, 🍃, 🧢 물체들 위에 겹치도록</b> 끌어놓아 빛에 따른 변화를 관찰해 보세요! 물체도 직접 드래그할 수 있습니다.";
+            }
+
+            render();
+        }
+
+        // 수치 컨트롤 조작 연동
+        function onControlChange() {
+            lights.red.intensity = parseInt(document.getElementById('slide-r-int').value) / 100;
+            lights.green.intensity = parseInt(document.getElementById('slide-g-int').value) / 100;
+            lights.blue.intensity = parseInt(document.getElementById('slide-b-int').value) / 100;
+
+            lights.red.radius = parseInt(document.getElementById('slide-r-rad').value);
+            lights.green.radius = parseInt(document.getElementById('slide-g-rad').value);
+            lights.blue.radius = parseInt(document.getElementById('slide-b-rad').value);
+
+            updateUI();
+            render();
+        }
+
+        // 왼쪽 패널 수치 갱신
+        function updateUI() {
+            document.getElementById('val-r').innerText = `${Math.round(lights.red.intensity * 100)}%`;
+            document.getElementById('val-g').innerText = `${Math.round(lights.green.intensity * 100)}%`;
+            document.getElementById('val-b').innerText = `${Math.round(lights.blue.intensity * 100)}%`;
+
+            document.getElementById('val-r-rad').innerText = `${lights.red.radius}px`;
+            document.getElementById('val-g-rad').innerText = `${lights.green.radius}px`;
+            document.getElementById('val-b-rad').innerText = `${lights.blue.radius}px`;
+        }
+
+        // --- 마우스 및 터치 이벤트 핸들링 ---
+        function getCoordinates(evt) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (evt.touches && evt.touches.length > 0) {
+                clientX = evt.touches[0].clientX;
+                clientY = evt.touches[0].clientY;
+            } else {
+                clientX = evt.clientX;
+                clientY = evt.clientY;
+            }
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function onMouseDown(evt) {
+            const pos = getCoordinates(evt);
+
+            // 1. 센서 드래그 우선 체크
+            const dSensor = Math.sqrt((pos.x - sensor.x)**2 + (pos.y - sensor.y)**2);
+            if (dSensor < sensor.radius + 15) {
+                isDragging = true;
+                dragTarget = 'sensor';
+                dragOffsetX = pos.x - sensor.x;
+                dragOffsetY = pos.y - sensor.y;
+                return;
+            }
+
+            // 2. 물체의 색 모드일 경우 물체 드래그 우선체크
+            if (currentTab === 'object') {
+                for (let i = 0; i < sceneObjects.length; i++) {
+                    const obj = sceneObjects[i];
+                    const dObj = Math.sqrt((pos.x - obj.x)**2 + (pos.y - obj.y)**2);
+                    if (dObj < obj.radius + 10) {
+                        isDragging = true;
+                        dragTarget = obj.id;
+                        dragOffsetX = pos.x - obj.x;
+                        dragOffsetY = pos.y - obj.y;
+                        return;
+                    }
+                }
+            }
+
+            // 3. 조명 핸들 드래그 체크
+            let selectedLight = null;
+            let minDist = Infinity;
+            const order = ['red', 'green', 'blue'];
+            for (let k of order) {
+                const lt = lights[k];
+                const dLight = Math.sqrt((pos.x - lt.x)**2 + (pos.y - lt.y)**2);
+                if (dLight < 45 && dLight < minDist) {
+                    minDist = dLight;
+                    selectedLight = k;
+                }
+            }
+
+            if (selectedLight) {
+                isDragging = true;
+                dragTarget = selectedLight;
+                dragOffsetX = pos.x - lights[selectedLight].x;
+                dragOffsetY = pos.y - lights[selectedLight].y;
+            }
+        }
+
+        function onMouseMove(evt) {
+            if (!isDragging || !dragTarget) return;
+            evt.preventDefault();
+
+            const pos = getCoordinates(evt);
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+
+            let targetX = pos.x - dragOffsetX;
+            let targetY = pos.y - dragOffsetY;
+
+            // 경계 영역 제한 처리
+            targetX = Math.max(10, Math.min(w - 10, targetX));
+            targetY = Math.max(10, Math.min(h - 10, targetY));
+
+            if (dragTarget === 'sensor') {
+                sensor.x = targetX;
+                sensor.y = targetY;
+            } else if (lights[dragTarget]) {
+                lights[dragTarget].x = targetX;
+                lights[dragTarget].y = targetY;
+            } else {
+                // 사물 객체 드래깅
+                const obj = sceneObjects.find(o => o.id === dragTarget);
+                if (obj) {
+                    obj.x = targetX;
+                    obj.y = targetY;
+                }
+            }
+
+            render();
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+            dragTarget = null;
+        }
+
+        function onTouchStart(evt) {
+            onMouseDown(evt);
+            if (isDragging) {
+                evt.preventDefault();
+            }
+        }
+
+        function onTouchMove(evt) {
+            onMouseMove(evt);
+        }
+
+        // --- 렌더링 물리 엔진 모듈 ---
+        function render() {
+            const dpr = window.devicePixelRatio || 1;
+            const w = canvas.width / dpr;
+            const h = canvas.height / dpr;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, w, h);
+
+            // 1. 하드웨어 가속 기반 고성능 삼원색 혼합 렌더링
+            renderNativeBlendingLights();
+
+            // 2. 조명 보조선 및 컨트롤 핸들 드로잉
+            drawControlHandles();
+
+            // 3. 만약 '물체의 색 관찰 모드'일 경우 사물들을 배치
+            if (currentTab === 'object') {
+                drawSceneObjects();
+            }
+
+            // 4. 빛 센서 인터페이스
+            drawSensorTool();
+
+            // 5. 센서 데이터 분석
+            analyzeSensorColor();
+        }
+
+        // [최적화 완료]: 픽셀 루프 대신 Canvas 2D 하드웨어 가속 그라데이션 기법 사용
+        function renderNativeBlendingLights() {
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen'; // 스크린 모드로 가산 혼합 구현
+
+            Object.keys(lights).forEach(key => {
+                const lt = lights[key];
+                if (lt.intensity <= 0) return;
+
+                // 세기에 맞춘 삼원색 광량 추출
+                let rVal = (key === 'red') ? Math.round(255 * lt.intensity) : 0;
+                let gVal = (key === 'green') ? Math.round(255 * lt.intensity) : 0;
+                let bVal = (key === 'blue') ? Math.round(255 * lt.intensity) : 0;
+
+                // 실제 전등처럼 원색이 뚜렷하게 중심부 주변까지 도달하도록 스톱 조절
+                const grad = ctx.createRadialGradient(lt.x, lt.y, 0, lt.x, lt.y, lt.radius);
+                grad.addColorStop(0, `rgba(${rVal}, ${gVal}, ${bVal}, 1.0)`);
+                grad.addColorStop(0.35, `rgba(${rVal}, ${gVal}, ${bVal}, 1.0)`); // 진하게 유지하는 영역 확장
+                grad.addColorStop(0.65, `rgba(${rVal}, ${gVal}, ${bVal}, 0.7)`); // 진한 혼합색 유도
+                grad.addColorStop(0.88, `rgba(${rVal}, ${gVal}, ${bVal}, 0.3)`);
+                grad.addColorStop(1.0, `rgba(${rVal}, ${gVal}, ${bVal}, 0.0)`);
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(lt.x, lt.y, lt.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.restore();
+        }
+
+        // 조명 제어 핸들 드로잉
+        function drawControlHandles() {
+            Object.keys(lights).forEach(key => {
+                const lt = lights[key];
+
+                // 가이드선
+                ctx.save();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(lt.x, lt.y, lt.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                // 중심 기둥 및 원판 그리기
+                ctx.beginPath();
+                ctx.arc(lt.x, lt.y, 16, 0, Math.PI * 2);
+                ctx.fillStyle = lt.handleColor;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                let label = (key === 'red') ? '빨강' : (key === 'green') ? '초록' : '파랑';
+                ctx.fillText(label, lt.x, lt.y + 4);
+            });
+        }
+
+        // [물체의 색상 실험 모드용]: 실시간 조명 반사 드로잉 모듈
+        function drawSceneObjects() {
+            const dpr = window.devicePixelRatio || 1;
+
+            sceneObjects.forEach(obj => {
+                // 1. 해당 물체 중심이 받는 삼원색 조명 밝기 연산
+                // 오작동 방지를 위한 물리 픽셀 바운더리 보호 적용
+                const px = Math.max(0, Math.min(canvas.width - 1, Math.round(obj.x * dpr)));
+                const py = Math.max(0, Math.min(canvas.height - 1, Math.round(obj.y * dpr)));
+                
+                let rIncoming = 0;
+                let gIncoming = 0;
+                let bIncoming = 0;
+
+                try {
+                    // 캔버스 내 해당 지점의 실제 도달 광선 데이터 획득
+                    const pixel = ctx.getImageData(px, py, 1, 1).data;
+                    rIncoming = pixel[0] / 255;
+                    gIncoming = pixel[1] / 255;
+                    bIncoming = pixel[2] / 255;
+                } catch(e) {
+                    rIncoming = 0; gIncoming = 0; bIncoming = 0;
+                }
+
+                // 2. 반사법칙: 물체의 고유 반사율(reflect)과 도달한 조명 강도를 곱해 최종 보이는 색상 계산
+                const finalR = Math.min(255, 255 * rIncoming * obj.reflect.r);
+                const finalG = Math.min(255, 255 * gIncoming * obj.reflect.g);
+                const finalB = Math.min(255, 255 * bIncoming * obj.reflect.b);
+
+                const resultingColor = `rgb(${Math.round(finalR)}, ${Math.round(finalG)}, ${Math.round(finalB)})`;
+
+                // 3. 물체 밑바탕 배경 및 광학 투영 플레이트 그리기
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(obj.x - 26, obj.y - 26, 52, 64, 8);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                // 보이는 결과 원형 판넬
+                ctx.save();
+                ctx.fillStyle = (finalR + finalG + finalB < 15) ? '#111827' : resultingColor;
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 광학 보정선 테두리
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+
+                // 4. 물체 에모지(이모티콘) 및 상태 텍스트
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.font = '22px sans-serif';
+                ctx.fillText(obj.emoji, obj.x, obj.y + 8);
+
+                // 물체가 반사해서 보이는 한글 자막 표기
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = 'bold 9px sans-serif';
+                let seenLabel = "검정 (흡수)";
+                if (finalR + finalG + finalB >= 15) {
+                    if (finalR > 120 && finalG > 120) seenLabel = "노란색";
+                    else if (finalR > 120) seenLabel = "빨간색";
+                    else if (finalG > 120) seenLabel = "초록색";
+                    else if (finalB > 120) seenLabel = "파란색";
+                }
+                ctx.fillText(seenLabel, obj.x, obj.y + 32);
+                ctx.restore();
+            });
+        }
+
+        // 🎯 센서 도구 드로잉
+        function drawSensorTool() {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 6;
+
+            ctx.strokeStyle = '#f8fafc';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(sensor.x, sensor.y, sensor.radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 십자 가이드선
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(sensor.x - sensor.radius - 6, sensor.y);
+            ctx.lineTo(sensor.x - 3, sensor.y);
+            ctx.moveTo(sensor.x + 3, sensor.y);
+            ctx.lineTo(sensor.x + sensor.radius + 6, sensor.y);
+            ctx.moveTo(sensor.x, sensor.y - sensor.radius - 6);
+            ctx.lineTo(sensor.x, sensor.y - 3);
+            ctx.moveTo(sensor.x, sensor.y + 3);
+            ctx.lineTo(sensor.x, sensor.y + sensor.radius + 6);
+            ctx.stroke();
+
+            // 중심 돋보기 컬러
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(sensor.x, sensor.y, 7, 0, Math.PI * 2);
+            ctx.fillStyle = sensor.color;
+            ctx.fill();
+            ctx.strokeStyle = '#020617';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // 라벨 태그
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(sensor.x - 45, sensor.y - sensor.radius - 24, 90, 16, 4);
+            ctx.fill();
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText("🎯 빛 감지 센서", sensor.x, sensor.y - sensor.radius - 12);
+
+            ctx.restore();
+        }
+
+        // 센서 지점 색 해독 분석
+        function analyzeSensorColor() {
+            const dpr = window.devicePixelRatio || 1;
+            // 아웃바운드 에러 원천 차단형 인덱싱 설계
+            const px = Math.max(0, Math.min(canvas.width - 1, Math.round(sensor.x * dpr)));
+            const py = Math.max(0, Math.min(canvas.height - 1, Math.round(sensor.y * dpr)));
+
+            try {
+                const pixel = ctx.getImageData(px, py, 1, 1).data;
+                const r = pixel[0];
+                const g = pixel[1];
+                const b = pixel[2];
+
+                sensor.color = `rgb(${r}, ${g}, ${b})`;
+                document.getElementById('sensor-color-preview').style.backgroundColor = sensor.color;
+
+                document.getElementById('sensor-val-r').innerText = r;
+                document.getElementById('sensor-val-g').innerText = g;
+                document.getElementById('sensor-val-b').innerText = b;
+
+                let colorName = "검은색 (어둠)";
+                let explain = "";
+
+                if (r < 15 && g < 15 && b < 15) {
+                    colorName = "검은색 (어둠)";
+                    explain = "센서 지점에 빛이 전혀 닿지 않고 있습니다. 빛이 차단되거나 존재하지 않으면 아무 빛도 눈에 닿지 않아 **검은색**으로 인지됩니다.";
+                } else if (Math.abs(r - g) < 25 && Math.abs(g - b) < 25 && Math.abs(r - b) < 25) {
+                    if (r > 180) {
+                        colorName = "흰색 (White)";
+                        explain = "빛의 삼원색(R, G, B)이 최고 밝기로 고르게 만나 **가장 밝은 흰색(백색광)**으로 우리 눈에 맺히고 있습니다.";
+                    } else {
+                        colorName = "회색 (Gray)";
+                        explain = "세 빛의 파장이 낮은 세기로 고르게 반사되어 희미하고 은은한 **회색**이 나타납니다.";
+                    }
+                } else if (r >= g && r > b) {
+                    if (g > 100 && b < 70) {
+                        colorName = "노란색 (Yellow)";
+                        explain = "<b>빨간빛(R)</b>과 <b>초록빛(G)</b>의 자극이 동시에 눈의 원추세포를 반응하게 하여 뇌에서 화사한 **노란색**으로 합성해 냅니다.";
+                    } else if (b > 100 && g < 70) {
+                        colorName = "자홍색 (Magenta)";
+                        explain = "<b>빨간빛(R)</b>과 <b>파란빛(B)</b>이 섞여 신비한 자줏빛인 **자홍색(마젠타)**이 만들어집니다.";
+                    } else {
+                        colorName = "빨간색 (Red)";
+                        explain = "주변에 빨간색 전등 빛만 집중적으로 도달하는 단일색 원색 구역입니다.";
+                    }
+                } else if (g >= r && g > b) {
+                    if (r > 100 && b < 70) {
+                        colorName = "노란색 (Yellow)";
+                        explain = "<b>초록빛(G)</b>과 <b>빨간빛(R)</b>이 고밀도로 뒤섞여 우리 망막을 자극해 선명한 **노란색**을 연출합니다.";
+                    } else if (b > 100 && r < 70) {
+                        colorName = "청록색 (Cyan)";
+                        explain = "<b>초록빛(G)</b>과 <b>파란빛(B)</b>이 중첩되면서 청량하고 푸른 에메랄드 **청록색(사이언)**이 형성됩니다.";
+                    } else {
+                        colorName = "초록색 (Green)";
+                        explain = "주변에 초록색 전등 빛만 집중적으로 도달하는 단일색 원색 구역입니다.";
+                    }
+                } else if (b >= r && b > g) {
+                    if (r > 100 && g < 70) {
+                        colorName = "자홍색 (Magenta)";
+                        explain = "<b>파란빛(B)</b>과 <b>빨간빛(R)</b>이 결합하여 매혹적인 붉은 보랏빛의 **자홍색(마젠타)**을 이룹니다.";
+                    } else if (g > 100 && r < 70) {
+                        colorName = "청록색 (Cyan)";
+                        explain = "<b>파란빛(B)</b>과 <b>초록빛(G)</b>이 중첩되어 푸른 바다 빛깔의 눈부신 **청록색(사이언)**을 형성합니다.";
+                    } else {
+                        colorName = "파란색 (Blue)";
+                        explain = "주변에 파란색 전등 빛만 집중적으로 도달하는 단일색 원색 구역입니다.";
+                    }
+                }
+
+                document.getElementById('sensor-color-name').innerText = colorName;
+                document.getElementById('sensor-color-name').style.color = (r+g+b > 100) ? `rgb(${r},${g},${b})` : '#ffffff';
+                document.getElementById('sensor-explain-text').innerHTML = explain;
+
+            } catch (err) {
+                document.getElementById('sensor-color-name').innerText = "측정 불가";
+            }
+        }
+    </script>
+</body>
+</html>
